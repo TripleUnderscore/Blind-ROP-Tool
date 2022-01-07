@@ -61,8 +61,8 @@ class LeakedValues():
 
 class ExploitStructure(BinAdr, LibcAdr, LeakedValues):
 
-	HOST = 'challenge03.root-me.org'
-	PORT = 56562
+	HOST = TARGETED_HOST_NAME
+	PORT = TARGETED_SERVICE_PORT
 
 	def __init__(self):
 		super().__init__()
