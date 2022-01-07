@@ -109,14 +109,14 @@ def checkParameter(ExploitStructure):
 	parser		= argparse.ArgumentParser()
 	conflict	= parser.add_mutually_exclusive_group()
 
-	parser.add_argument("-d", "--debug",		help="show debugging informations during execution", action="store_true")	# me renseigner sur le store_true car j'ai oublie depuis le tmps ^^'
+	parser.add_argument("-d", "--debug",		help="show debugging informations during execution", action="store_true")
 	parser.add_argument("-e", "--exploit",		help="launching standard exploitation ; pass 0 to get more informations", choices = [0, 1, 2], default = 2, type=int)
-	parser.add_argument("-s", "--silent",		help="make pwntools silent", action="store_true")	# me renseigner sur le store_true car j'ai oublie depuis le tmps ^^'
+	parser.add_argument("-s", "--silent",		help="make pwntools silent", action="store_true")
 	parser.add_argument("-v", "--handvalues",	help="use values set manually in the script", action="store_true")
-	#parser.add_argument("-lv", "--leakvalues", help="simply leaking values and exit", action="store_true")
 
 	conflict.add_argument("-b", "--buildid",		help="pass buildid for specific libc", type=str)
 	conflict.add_argument("-n", "--nolibcleak",	help="don't perform libc leak ; be sure you already have a libc fragment from which read a BuildID", action="store_true")
+	# concernant cette derniere option, indiquer le chemin du cache que Python utilise pour stocker les libc telechargees
 	args = parser.parse_args()
 
 	if args.silent:
