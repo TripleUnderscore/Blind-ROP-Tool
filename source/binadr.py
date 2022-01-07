@@ -110,7 +110,7 @@ def leakValues(ExploitStructure):
 					OA += 1
 					break
 
-		main.persoPrint(tabstr[indice], LEAKVAL, 0)
+		brop.persoPrint(tabstr[indice], LEAKVAL, 0)
 		LEAKEDINFO.append(LEAKVAL)
 
 		if len(LEAKEDINFO)		== 1:
