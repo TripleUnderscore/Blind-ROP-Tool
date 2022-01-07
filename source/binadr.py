@@ -2,7 +2,7 @@
 
 from pwn import *
 import sys
-import main
+import brop
 
 # SYNTAX COLOURS AND SYSTEM DATA:
 
