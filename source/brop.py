@@ -53,9 +53,9 @@ class LeakedValues():
 		super().__init__()
 
 		##### A ADAPTER
-		CANARY	= p64(0x633ff5b6fce38600)
-		RBP		= p64(0x00007ffc44c70320)
-		RETADR	= p64(0x00007f8332301245)
+		self.CANARY	= p64(0x633ff5b6fce38600)
+		self.RBP		= p64(0x00007ffc44c70320)
+		self.RETADR	= p64(0x00007f8332301245)
 		###############
 
 
