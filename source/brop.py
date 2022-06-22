@@ -110,7 +110,7 @@ def checkParameter(ExploitStructure):
 	conflict	= parser.add_mutually_exclusive_group()
 
 	parser.add_argument("-d", "--debug",		help="show debugging informations during execution", action="store_true")
-	parser.add_argument("-e", "--exploit",		help="launching standard exploitation ; pass 0 to get more informations", choices = [0, 1, 2], default = 2, type=int)
+	parser.add_argument("-e", "--exploit",		help="launching standard exploitation ; use 0 to get more information", choices = [0, 1, 2], default = 2, type=int)
 	parser.add_argument("-s", "--silent",		help="make pwntools silent", action="store_true")
 	parser.add_argument("-v", "--handvalues",	help="use values set manually in the script", action="store_true")
 
