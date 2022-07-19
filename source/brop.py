@@ -40,7 +40,7 @@ class LibcAdr():
 	
 	def _set_NOLIBLEAK(self, VALUE):
 		if VALUE:
-			print(CVER + "[+] No Libc leak will be perfomed" + CEND)
+			print(CVER + "[+] No Libc leak will be performed" + CEND)
 		self._NOLIBLEAK = VALUE
 		return(self._NOLIBLEAK)
 	
