@@ -7,7 +7,7 @@ import libcadr
 import shell
 from bk_class import ExploitMethods
 import print_tools as pt
-import _info_file as info
+import _info_file as infoFile
 
 from pwn import *
 
@@ -69,12 +69,12 @@ def get_exploit_type(param_object):
     elif param_object.exploit == 2:
         pt.printInfo("Starting standard exploitation.")
     else:
-        info.exploitInfo()
+        infoFile.exploitInfo()
     return param_object.exploit
 
 def get_architecture(param_object):
     if param_object.architecture == 0:
-        info.infoArch()
+        infoFile.infoArch()
     elif param_object.architecture == 4:
         printWarning("ARM architecture option is not implemented yet")
         exit(0)
@@ -188,7 +188,7 @@ def main():
             # TODO use full hand value
             print('h_f')
         else: # Default behaviour if self.hand is wrong
-            info.printFileValuesExample()
+            infoFile.printFileValuesExample()
     else: # e_s.hand should be ""
             # leaking value
             pt.printInfo("Starting standard exploitation from scratch...")

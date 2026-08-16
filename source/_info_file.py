@@ -1,7 +1,6 @@
 
 from print_tools import printInfo, ccya, cthin, cver, cend
 
-# A déplacer
 def exploitInfo():
     print(cver + "\nInformations about --exploit option :" + cend)
     print(cver + "\t0 :" + cend + cthin + " print this help and exit." + cend)
@@ -9,7 +8,6 @@ def exploitInfo():
     print(cver + "\t2 :" + cend + cthin + " launch the attack from A to Z.\n" + cend)
     exit(0)
 
-# A déplacer
 def infoArch():
     print(cver + "\nInformations about --architecture option :" + cend)
     print(cver + "\tdefault :" + cthin + " the tool will try to guess the targeted architecture." + cend)
