@@ -23,7 +23,8 @@ def checkParameter():
 
     parser.add_argument("-d", "--debug",        help="show debugging informations during execution", action="store_true")
     parser.add_argument("-e", "--exploit",      help="launching standard exploitation ; use 0 to get more information", choices = [0, 1, 2], default = 2, type=int)
-    parser.add_argument("-s", "--silent",       help="make pwntools silent", action="store_true")
+    # parser.add_argument("-s", "--silent",       help="make pwntools silent", action="store_true")
+    parser.add_argument("-v", "--verbose",       help="make pwntools verbose", action="store_true")
 
     # Pour celle-là, voir si on remplit les valeurs à la demande ou directement en une seule chaine.
     conflict_values.add_argument("-hf", "--handvalues_full",  help="tell the script to ask for all necessary values for exploitation ; better use --from-file option to avoid mistake", action="store_true")
@@ -44,7 +45,8 @@ def checkParameter():
     # Check target format
 
 def define_verbosity(args):
-    if args.silent:
+    # if args.silent:
+    if not args.verbose:
         context.log_level='error'
     elif args.debug:
         context.log_level='debug'
